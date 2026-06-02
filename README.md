@@ -29,6 +29,12 @@ Tracks recent page and selection activity, then lets you jump back from a floati
 - `npm run build` — compile `code.ts` -> `code.js`
 - `npm run watch` — rebuild on TypeScript changes
 
+## Team rollout docs
+
+- Internal distribution: `docs/internal-distribution.md`
+- Release/versioning process: `docs/release-process.md`
+- Release notes: `CHANGELOG.md`
+
 ## Manual test checklist
 
 Use this checklist in a multi-page Figma file with a few frames/layers.

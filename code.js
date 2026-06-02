@@ -1,8 +1,9 @@
 "use strict";
+var _a;
 const MAX_HISTORY = 100;
 const DEDUPE_WINDOW_MS = 1200;
 const SELECTION_DEBOUNCE_MS = 250;
-const fileKey = figma.fileKey ?? "unsaved-file";
+const fileKey = (_a = figma.fileKey) !== null && _a !== void 0 ? _a : "unsaved-file";
 const storageKey = `history::${fileKey}`;
 let historyEntries = [];
 let selectionDebounceTimer;
@@ -13,11 +14,11 @@ function makeEntryId() {
 }
 function readSelectionNode() {
     const selected = figma.currentPage.selection[0];
-    return selected ?? null;
+    return selected !== null && selected !== void 0 ? selected : null;
 }
 function snapshotViewport() {
     return {
-        center: { ...figma.viewport.center },
+        center: Object.assign({}, figma.viewport.center),
         zoom: figma.viewport.zoom
     };
 }
@@ -31,14 +32,15 @@ function buildEntry(type) {
         fileKey,
         pageId: page.id,
         pageName: page.name,
-        nodeId: selectedNode?.id,
-        nodeName: selectedNode?.name,
-        nodeType: selectedNode?.type,
+        nodeId: selectedNode === null || selectedNode === void 0 ? void 0 : selectedNode.id,
+        nodeName: selectedNode === null || selectedNode === void 0 ? void 0 : selectedNode.name,
+        nodeType: selectedNode === null || selectedNode === void 0 ? void 0 : selectedNode.type,
         viewport: snapshotViewport()
     };
 }
 function targetKey(entry) {
-    return `${entry.pageId}::${entry.nodeId ?? "page"}`;
+    var _a;
+    return `${entry.pageId}::${(_a = entry.nodeId) !== null && _a !== void 0 ? _a : "page"}`;
 }
 function shouldSkipAsNoise(entry) {
     const previous = historyEntries[0];
@@ -172,7 +174,8 @@ function findPageById(pageId) {
     return null;
 }
 async function findSceneNode(nodeId) {
-    let node = await figma.getNodeByIdAsync(nodeId);
+    const hasAsyncLookup = typeof figma.getNodeByIdAsync === "function";
+    let node = hasAsyncLookup ? await figma.getNodeByIdAsync(nodeId) : null;
     if (!node) {
         node = figma.getNodeById(nodeId);
     }
@@ -209,8 +212,7 @@ async function jumpToHistoryEntry(entryId) {
 function showHistoryUi() {
     figma.showUI(__html__, {
         width: 360,
-        height: 520,
-        title: "History"
+        height: 520
     });
 }
 function onUiMessage(message) {
@@ -264,6 +266,7 @@ async function startPlugin() {
 }
 startPlugin().catch((error) => {
     console.error("Plugin failed to start:", error);
-    figma.notify("History plugin failed to start.");
+    const message = error instanceof Error ? error.message : String(error);
+    figma.notify(`History plugin failed to start: ${message}`);
     figma.closePlugin();
 });

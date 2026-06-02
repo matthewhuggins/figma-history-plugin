@@ -224,7 +224,8 @@ function findPageById(pageId: string): PageNode | null {
 }
 
 async function findSceneNode(nodeId: string): Promise<SceneNode | null> {
-  let node = await figma.getNodeByIdAsync(nodeId);
+  const hasAsyncLookup = typeof figma.getNodeByIdAsync === "function";
+  let node = hasAsyncLookup ? await figma.getNodeByIdAsync(nodeId) : null;
   if (!node) {
     node = figma.getNodeById(nodeId);
   }
@@ -267,8 +268,7 @@ async function jumpToHistoryEntry(entryId: string): Promise<void> {
 function showHistoryUi(): void {
   figma.showUI(__html__, {
     width: 360,
-    height: 520,
-    title: "History"
+    height: 520
   });
 }
 
@@ -334,6 +334,7 @@ async function startPlugin(): Promise<void> {
 
 startPlugin().catch((error) => {
   console.error("Plugin failed to start:", error);
-  figma.notify("History plugin failed to start.");
+  const message = error instanceof Error ? error.message : String(error);
+  figma.notify(`History plugin failed to start: ${message}`);
   figma.closePlugin();
 });
