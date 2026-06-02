@@ -1,0 +1,14 @@
+{
+  "name": "figma-history-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Quick prototype Figma plugin for navigating recent page and layer history.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "latest",
+    "typescript": "latest"
+  }
+}

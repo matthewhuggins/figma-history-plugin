@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>History</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      body {
+        margin: 0;
+        font: 12px/1.4 Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        padding: 12px;
+        border-bottom: 1px solid #d7d7d7;
+      }
+
+      .search {
+        flex: 1;
+        border: 1px solid #b3b3b3;
+        border-radius: 6px;
+        padding: 7px 9px;
+      }
+
+      .button {
+        border: 1px solid #b3b3b3;
+        border-radius: 6px;
+        padding: 6px 10px;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow: auto;
+      }
+
+      .empty {
+        padding: 14px;
+        color: #666;
+      }
+
+      .item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid #ececec;
+        padding: 10px 12px;
+        text-align: left;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .item:hover {
+        background: rgba(125, 125, 125, 0.1);
+      }
+
+      .line-primary {
+        font-weight: 600;
+      }
+
+      .line-secondary {
+        color: #666;
+      }
+
+      .kind {
+        border: 1px solid #b3b3b3;
+        border-radius: 999px;
+        padding: 1px 6px;
+        font-size: 10px;
+      }
+
+      .footer {
+        padding: 8px 12px;
+        border-top: 1px solid #d7d7d7;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="toolbar">
+        <input id="search" class="search" type="text" placeholder="Search page or layer" />
+        <button id="clear" class="button" type="button">Clear</button>
+      </div>
+      <ul id="list" class="list"></ul>
+      <div class="footer">Click an item to jump back.</div>
+    </div>
+
+    <script>
+      /** @type {Array<any>} */
+      let allEntries = [];
+      let query = "";
+
+      const listElement = document.getElementById("list");
+      const searchInput = document.getElementById("search");
+      const clearButton = document.getElementById("clear");
+
+      function formatTimeAgo(timestamp) {
+        const diffMs = Date.now() - timestamp;
+        const diffSeconds = Math.max(1, Math.floor(diffMs / 1000));
+        if (diffSeconds < 60) return `${diffSeconds}s ago`;
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        if (diffMinutes < 60) return `${diffMinutes}m ago`;
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+      }
+
+      function rowLabel(entry) {
+        if (entry.nodeName) return entry.nodeName;
+        return entry.pageName;
+      }
+
+      function rowDetail(entry) {
+        const location = entry.nodeName
+          ? `${entry.pageName} • ${entry.nodeType || "Node"}`
+          : `${entry.pageName} • Page`;
+        return `${location} • ${formatTimeAgo(entry.timestamp)}`;
+      }
+
+      function matchesFilter(entry) {
+        if (!query) return true;
+        const haystack = `${entry.pageName} ${entry.nodeName || ""} ${entry.nodeType || ""}`.toLowerCase();
+        return haystack.includes(query);
+      }
+
+      function renderEntries() {
+        const visibleEntries = allEntries.filter(matchesFilter);
+        if (visibleEntries.length === 0) {
+          const message = allEntries.length === 0 ? "No history captured yet." : "No matches for this search.";
+          listElement.innerHTML = `<li class="empty">${message}</li>`;
+          return;
+        }
+
+        listElement.innerHTML = "";
+        for (const entry of visibleEntries) {
+          const li = document.createElement("li");
+          const button = document.createElement("button");
+          const kind = entry.type === "selection" ? "Layer" : "Page";
+
+          button.className = "item";
+          button.type = "button";
+          button.innerHTML = `
+            <div class="line-primary">${rowLabel(entry)} <span class="kind">${kind}</span></div>
+            <div class="line-secondary">${rowDetail(entry)}</div>
+          `;
+
+          button.addEventListener("click", () => {
+            parent.postMessage(
+              {
+                pluginMessage: {
+                  type: "jump-to-entry",
+                  id: entry.id
+                }
+              },
+              "*"
+            );
+          });
+
+          li.appendChild(button);
+          listElement.appendChild(li);
+        }
+      }
+
+      searchInput.addEventListener("input", (event) => {
+        query = event.target.value.trim().toLowerCase();
+        renderEntries();
+      });
+
+      clearButton.addEventListener("click", () => {
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "clear-history"
+            }
+          },
+          "*"
+        );
+      });
+
+      window.onmessage = (event) => {
+        const message = event.data.pluginMessage;
+        if (!message || message.type !== "history-data" || !Array.isArray(message.entries)) {
+          return;
+        }
+        allEntries = message.entries;
+        renderEntries();
+      };
+
+      parent.postMessage({ pluginMessage: { type: "request-history" } }, "*");
+    </script>
+  </body>
+</html>
