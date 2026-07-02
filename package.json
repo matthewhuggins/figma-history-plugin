@@ -5,10 +5,12 @@
   "description": "Quick prototype Figma plugin for navigating recent page and layer history.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "watch": "tsc -p tsconfig.json --watch"
+    "watch": "tsc -p tsconfig.json --watch",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@figma/plugin-typings": "latest",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.1.9"
   }
 }
