@@ -154,13 +154,26 @@
           const li = document.createElement("li");
           const button = document.createElement("button");
           const kind = entry.type === "selection" ? "Layer" : "Page";
+          const linePrimary = document.createElement("div");
+          const labelSpan = document.createElement("span");
+          const kindSpan = document.createElement("span");
+          const lineSecondary = document.createElement("div");
 
           button.className = "item";
           button.type = "button";
-          button.innerHTML = `
-            <div class="line-primary">${rowLabel(entry)} <span class="kind">${kind}</span></div>
-            <div class="line-secondary">${rowDetail(entry)}</div>
-          `;
+
+          linePrimary.className = "line-primary";
+          labelSpan.textContent = `${rowLabel(entry)} `;
+          kindSpan.className = "kind";
+          kindSpan.textContent = kind;
+          linePrimary.appendChild(labelSpan);
+          linePrimary.appendChild(kindSpan);
+
+          lineSecondary.className = "line-secondary";
+          lineSecondary.textContent = rowDetail(entry);
+
+          button.appendChild(linePrimary);
+          button.appendChild(lineSecondary);
 
           button.addEventListener("click", () => {
             parent.postMessage(
