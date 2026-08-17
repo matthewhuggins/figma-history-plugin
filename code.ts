@@ -215,8 +215,14 @@ async function clearHistory(sendUiUpdate = true): Promise<void> {
   }
 }
 
-function findPageById(pageId: string): PageNode | null {
-  const node = figma.getNodeById(pageId);
+function findPageByName(pageName: string): PageNode | null {
+  const page = figma.root.children.find((candidate) => candidate.name === pageName);
+  return page ?? null;
+}
+
+async function findPageByIdAsync(pageId: string): Promise<PageNode | null> {
+  const hasAsyncLookup = typeof figma.getNodeByIdAsync === "function";
+  const node = hasAsyncLookup ? await figma.getNodeByIdAsync(pageId) : null;
   if (node && node.type === "PAGE") {
     return node;
   }
@@ -225,10 +231,7 @@ function findPageById(pageId: string): PageNode | null {
 
 async function findSceneNode(nodeId: string): Promise<SceneNode | null> {
   const hasAsyncLookup = typeof figma.getNodeByIdAsync === "function";
-  let node = hasAsyncLookup ? await figma.getNodeByIdAsync(nodeId) : null;
-  if (!node) {
-    node = figma.getNodeById(nodeId);
-  }
+  const node = hasAsyncLookup ? await figma.getNodeByIdAsync(nodeId) : null;
   if (node && "type" in node && node.type !== "PAGE") {
     return node as SceneNode;
   }
@@ -242,27 +245,37 @@ async function jumpToHistoryEntry(entryId: string): Promise<void> {
     return;
   }
 
-  const page = findPageById(entry.pageId);
+  const page = (await findPageByIdAsync(entry.pageId)) ?? findPageByName(entry.pageName);
   if (!page) {
     figma.notify(`Cannot find page "${entry.pageName}" anymore.`);
     return;
   }
 
-  if (figma.currentPage.id !== page.id) {
-    await figma.setCurrentPageAsync(page);
+  try {
+    if (figma.currentPage.id !== page.id) {
+      await figma.setCurrentPageAsync(page);
+    }
+  } catch (error) {
+    console.error("Failed to switch page:", error);
+    figma.notify(`Unable to switch to page "${page.name}".`);
+    return;
   }
 
   if (entry.nodeId) {
-    const node = await findSceneNode(entry.nodeId);
-    if (node) {
-      figma.currentPage.selection = [node];
-      figma.viewport.scrollAndZoomIntoView([node]);
-      return;
+    try {
+      const node = await findSceneNode(entry.nodeId);
+      if (node) {
+        figma.currentPage.selection = [node];
+        figma.viewport.scrollAndZoomIntoView([node]);
+        return;
+      }
+    } catch (error) {
+      console.error("Failed to focus node:", error);
     }
   }
 
   figma.currentPage.selection = [];
-  figma.notify(`Moved to page "${entry.pageName}".`);
+  figma.notify(`Moved to page "${page.name}". The original layer may no longer be available.`);
 }
 
 function showHistoryUi(): void {
@@ -281,7 +294,8 @@ function onUiMessage(message: UiToPluginMessage): void {
   if (message.type === "jump-to-entry") {
     jumpToHistoryEntry(message.id).catch((error) => {
       console.error("Jump failed:", error);
-      figma.notify("Unable to jump to that history entry.");
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      figma.notify(`Unable to jump to that history entry: ${errorMessage}`);
     });
     return;
   }
